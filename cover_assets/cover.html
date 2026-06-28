@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sports Arbitrage on Polymarket</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c-bg: #0F1419;
+    --c-grid: rgba(255, 255, 255, 0.025);
+    --c-line: #10B981;
+    --c-text: #E5E7EB;
+    --c-muted: #6B7280;
+    --c-accent: #10B981;
+    --c-accent-2: #F59E0B;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: 794px 1123px; margin: 0; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 794px;
+    height: 1123px;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .cover {
+    position: relative;
+    width: 794px;
+    height: 1123px;
+    background: var(--c-bg);
+    overflow: hidden;
+  }
+
+  /* Layer 1 — background grid */
+  .layer-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    background-image:
+      linear-gradient(to right, var(--c-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--c-grid) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Layer 2 — structure: thick vertical anchor line */
+  .layer-struct {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+  .vline {
+    position: absolute;
+    left: 80px;          /* shifted left to widen text gap */
+    top: 112px;
+    bottom: 112px;
+    width: 6px;
+    background: var(--c-line);
+  }
+
+  /* Tiny corner markers (terminal-style) */
+  .corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--c-muted);
+    opacity: 0.45;
+  }
+  .corner.tl { top: 36px; left: 36px; border-top: 1px solid; border-left: 1px solid; }
+  .corner.tr { top: 36px; right: 36px; border-top: 1px solid; border-right: 1px solid; }
+  .corner.bl { bottom: 36px; left: 36px; border-bottom: 1px solid; border-left: 1px solid; }
+  .corner.br { bottom: 36px; right: 36px; border-bottom: 1px solid; border-right: 1px solid; }
+
+  /* Layer 3 — content */
+  .layer-content {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    padding-left: 140px;  /* vline (80) + 6 + 54 offset = 140 (≥40px gap) */
+    padding-right: 80px;
+  }
+
+  /* A — Kicker */
+  .kicker {
+    position: absolute;
+    top: 168px;
+    left: 140px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    opacity: 0.85;
+  }
+  .kicker .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    margin: 0 10px 2px 0;
+    vertical-align: middle;
+    box-shadow: 0 0 8px var(--c-accent);
+  }
+
+  /* B — Hero title */
+  .hero {
+    position: absolute;
+    top: 280px;
+    left: 140px;
+    right: 80px;
+    max-width: 580px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 56px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--c-text);
+  }
+  .hero .accent { color: var(--c-accent); }
+
+  /* Subtitle */
+  .subtitle {
+    position: absolute;
+    top: 510px;
+    left: 140px;
+    right: 80px;
+    max-width: 540px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--c-text);
+    opacity: 0.82;
+  }
+  .subtitle strong { color: var(--c-accent-2); font-weight: 600; }
+
+  /* C — Summary block (mandatory) */
+  .summary {
+    position: absolute;
+    top: 620px;
+    left: 140px;
+    right: 80px;
+    max-width: 540px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--c-muted);
+  }
+
+  /* Stat strip — three KPIs in mono */
+  .stats {
+    position: absolute;
+    top: 800px;
+    left: 140px;
+    right: 80px;
+    display: flex;
+    gap: 48px;
+  }
+  .stat {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stat .num {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--c-text);
+    letter-spacing: -0.02em;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .stat .num .pct { color: var(--c-accent); }
+  .stat .label {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--c-muted);
+  }
+
+  /* D — Meta / date */
+  .meta {
+    position: absolute;
+    top: 960px;
+    left: 140px;
+    right: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--c-muted);
+    letter-spacing: 1.5px;
+  }
+  .meta .left, .meta .right { display: flex; flex-direction: column; gap: 6px; }
+  .meta .right { text-align: right; }
+  .meta strong {
+    color: var(--c-text);
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* Footer status bar */
+  .footer-bar {
+    position: absolute;
+    bottom: 36px;
+    left: 140px;
+    right: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--c-muted);
+    opacity: 0.6;
+  }
+  .footer-bar .right { color: var(--c-accent); opacity: 0.85; }
+
+  /* Code-glyph watermark */
+  .watermark {
+    position: absolute;
+    top: 280px;
+    right: 60px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--c-accent);
+    opacity: 0.18;
+    line-height: 1.45;
+    text-align: right;
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+
+  <!-- Layer 1: background grid -->
+  <div class="layer-bg"></div>
+
+  <!-- Layer 2: structure -->
+  <div class="layer-struct">
+    <div class="vline"></div>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+  </div>
+
+  <!-- Layer 3: content -->
+  <div class="layer-content"></div>
+
+  <div class="kicker">
+    <span class="dot"></span>QUANT RESEARCH · v1.0 · 2026
+  </div>
+
+  <div class="hero">
+    Sports Arbitrage<br>
+    on <span class="accent">Polymarket</span><br>
+    A Quant Dev Masterclass
+  </div>
+
+  <div class="subtitle">
+    Single-market YES+NO edges, combinatorial covering portfolios,<br>
+    and production scanner architecture for <strong>NBA-scale volume</strong>.
+  </div>
+
+  <div class="summary">
+    A complete operator's manual for the sports prediction-market edge:
+    the mathematics of binary and NegRisk arbitrage, the early-2026 fee
+    regime, real-time Gamma and CLOB data pipelines, an LP-based covering
+    portfolio solver, Kelly sizing under settlement risk, and a fully
+    async execution engine with partial-fill hedging. Twelve runnable
+    Python modules ship alongside this guide.
+  </div>
+
+  <div class="watermark">
+    &gt; scanner.init()<br>
+    &gt; fetch_events(NBA)<br>
+    &gt; detect_arb() ...<br>
+    &gt; edge = 87bps<br>
+    &gt; execute(YES, NO)<br>
+    &gt; pnl += $14.32<br>
+    &gt; _loop_
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="num">~100</span>
+      <span class="label">Opps / market / day</span>
+    </div>
+    <div class="stat">
+      <span class="num">$0.60</span>
+      <span class="label">Median profit / $1</span>
+    </div>
+    <div class="stat">
+      <span class="num"><span class="pct">0.75%</span></span>
+      <span class="label">Taker fee (maker = 0)</span>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="left">
+      <span>PREPARED FOR</span>
+      <strong>Quant developers &amp; arb operators</strong>
+      <span>NBA-focused edition</span>
+    </div>
+    <div class="right">
+      <span>VERSION</span>
+      <strong>v1.0 · 2026</strong>
+      <span>12 Python modules included</span>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span>POLYGON · USDC · GAMMA-API · CLOB-WS</span>
+    <span class="right">● LIVE</span>
+  </div>
+
+</div>
+</body>
+</html>
